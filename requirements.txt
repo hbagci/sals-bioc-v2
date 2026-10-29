@@ -1,0 +1,7 @@
+flask>=2.3
+numpy
+pandas
+scipy
+scikit-learn
+torch
+bayesian-optimization

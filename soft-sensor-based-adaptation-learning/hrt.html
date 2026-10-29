@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" class="view-ps hrt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SALS-BioC — HRT: LRV Calculation</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body class="view-ps hrt hrt-both">
+
+    <!-- ── App header ─────────────────────────────────────────────────────── -->
+    <header class="app-header">
+        <h1>HRT: LRV Calculation</h1>
+        <span class="subtitle">Influent and effluent side by side — HRT distribution, LRV / COD removal / OLR, and cross-membrane model development.</span>
+        <a href="/" class="compare-link">&#8592; Back to Generator</a>
+    </header>
+
+    <!-- ── Real-data bar (two sides + view selector) ──────────────────────── -->
+    <div class="real-data-bar">
+        <div class="hrt-bar-group" data-side="left">
+            <span class="group-label">Influent</span>
+            <input type="file" id="left-file" accept=".csv">
+            <label for="left-file" class="btn-file">Choose CSV</label>
+            <button id="left-clear" class="btn-clear">&#10005;</button>
+            <span class="file-name" id="left-filename">No file selected</span>
+            <span class="data-info" id="left-info"></span>
+            <span class="loading-indicator" id="left-real-loading">Loading&hellip;</span>
+        </div>
+        <div class="hrt-bar-group" data-side="right">
+            <span class="group-label">Effluent</span>
+            <input type="file" id="right-file" accept=".csv">
+            <label for="right-file" class="btn-file">Choose CSV</label>
+            <button id="right-clear" class="btn-clear">&#10005;</button>
+            <span class="file-name" id="right-filename">No file selected</span>
+            <span class="data-info" id="right-info"></span>
+            <span class="loading-indicator" id="right-real-loading">Loading&hellip;</span>
+        </div>
+        <select id="hrt-view" class="hrt-view-select">
+            <option value="both">Both sides</option>
+            <option value="influent">Influent only</option>
+            <option value="effluent">Effluent only</option>
+        </select>
+    </div>
+
+    <!-- ── Scrollable page body ───────────────────────────────────────────── -->
+    <div class="page-scroll">
+
+        <!-- Log10 transform — chosen before anything runs -->
+        <details id="hrt-log-section" open>
+            <summary class="section-toggle">Log10 Transform &amp; Start</summary>
+            <div class="hrt-single" id="hrt-log-body">
+                <div class="placeholder">Load the influent and effluent CSVs above to choose which columns are log10-transformed.</div>
+            </div>
+        </details>
+
+        <!-- Data generation (identical to the main page, one panel per side) -->
+        <details id="datagen-section" open>
+            <summary class="section-toggle">Data Generation</summary>
+
+            <div class="comparison-container">
+
+                <div class="panel left">
+                    <div class="panel-header">
+                        <span class="panel-title" id="left-title">Influent — EMCM-PS</span>
+                        <div class="gen-controls">
+                            <button id="left-generate" class="btn-generate" disabled>Generate</button>
+                            <label class="auto-toggle"><input type="checkbox" id="left-auto"> Auto-regenerate</label>
+                            <button id="left-download" class="btn-download" disabled>Download CSV</button>
+                            <span class="stats-info" id="left-stats-info"></span>
+                            <span class="loading-indicator" id="left-loading">Generating&hellip;</span>
+                        </div>
+                    </div>
+                    <div class="params-mount" id="left-params"></div>
+                    <div class="panel-content" id="left-content">
+                        <div class="placeholder">Load the real influent CSV above to begin.</div>
+                    </div>
+                </div>
+
+                <div class="panel right">
+                    <div class="panel-header">
+                        <span class="panel-title" id="right-title">Effluent — EMCM-PS</span>
+                        <div class="gen-controls">
+                            <button id="right-generate" class="btn-generate" disabled>Generate</button>
+                            <label class="auto-toggle"><input type="checkbox" id="right-auto"> Auto-regenerate</label>
+                            <button id="right-download" class="btn-download" disabled>Download CSV</button>
+                            <span class="stats-info" id="right-stats-info"></span>
+                            <span class="loading-indicator" id="right-loading">Generating&hellip;</span>
+                        </div>
+                    </div>
+                    <div class="params-mount" id="right-params"></div>
+                    <div class="panel-content" id="right-content">
+                        <div class="placeholder">Load the real effluent CSV above to begin.</div>
+                    </div>
+                </div>
+
+            </div>
+        </details>
+
+        <!-- HRT distribution — one per side -->
+        <details id="hrt-dist-section" open>
+            <summary class="section-toggle">HRT Distribution</summary>
+            <div class="hrt-container">
+                <div class="hrt-side" data-side="left"></div>
+                <div class="hrt-side" data-side="right"></div>
+            </div>
+        </details>
+
+        <!-- Indicators — needs both sides, single view -->
+        <details id="hrt-indicator-section" open>
+            <summary class="section-toggle">Indicators — LRV / COD removal / OLR</summary>
+            <div class="hrt-single" id="hrt-indicator-body">
+                <div class="placeholder">Generate both sides to compute the indicators.</div>
+            </div>
+        </details>
+
+        <!-- Model development — LSTM -->
+        <details id="hrt-lstm-section" open>
+            <summary class="section-toggle">HRT Model Development — LSTM</summary>
+            <div class="hrt-single" id="hrt-lstm-body"></div>
+        </details>
+
+        <!-- Model development — Lifelong-LSTM -->
+        <details id="hrt-lifelong-section" open>
+            <summary class="section-toggle">HRT Model Development — Lifelong-LSTM</summary>
+            <div class="hrt-single" id="hrt-lifelong-body"></div>
+        </details>
+
+    </div><!-- end .page-scroll -->
+
+    <!-- ── Scripts (load order matters) ──────────────────────────────────── -->
+    <script src="js/config.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/metrics.js"></script>
+    <script src="js/dimreduction.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/params.js"></script>
+    <script src="js/generator.js"></script>
+    <script src="js/panel.js"></script>
+    <script src="js/hrt_config.js"></script>
+    <script src="js/hrt_log.js"></script>
+    <script src="js/hrt_indicators.js"></script>
+    <script src="js/hrt_charts.js"></script>
+    <script src="js/hrt_model.js"></script>
+    <script src="js/hrt_app.js"></script>
+
+</body>
+</html>
